@@ -5,7 +5,12 @@ import bcrypt from "bcryptjs";
 
 const app = express()
 
-const normalizeOrigin = (origin: string) => origin.replace(/\/+$/, "");
+const normalizeOrigin = (origin: string) =>
+    origin
+        .trim()
+        .replace(/^['\"]|['\"]$/g, "")
+        .replace(/\/+$/, "")
+        .toLowerCase();
 
 const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173")
     .split(",")
@@ -13,7 +18,7 @@ const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173")
     .map(normalizeOrigin)
     .filter(Boolean);
 
-app.use(cors({
+const corsOptions: cors.CorsOptions = {
     origin: (requestOrigin, callback) => {
         // Allow non-browser requests and server-to-server calls.
         if (!requestOrigin) {
@@ -32,7 +37,10 @@ app.use(cors({
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
     allowedHeaders: ["Content-Type", "Authorization"],
     optionsSuccessStatus: 204
-}));
+};
+
+app.use(cors(corsOptions));
+app.options("*", cors(corsOptions));
 app.use(express.json())
 
 // Register endpoint
