@@ -18,6 +18,15 @@ const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173")
     .map(normalizeOrigin)
     .filter(Boolean);
 
+const isAllowedNetlifyOrigin = (origin: string) => {
+    try {
+        const { hostname, protocol } = new URL(origin);
+        return protocol === "https:" && hostname.endsWith(".netlify.app");
+    } catch {
+        return false;
+    }
+};
+
 const corsOptions: cors.CorsOptions = {
     origin: (requestOrigin, callback) => {
         // Allow non-browser requests and server-to-server calls.
@@ -27,11 +36,12 @@ const corsOptions: cors.CorsOptions = {
 
         const normalizedRequestOrigin = normalizeOrigin(requestOrigin);
 
-        if (allowedOrigins.includes(normalizedRequestOrigin)) {
+        if (allowedOrigins.includes(normalizedRequestOrigin) || isAllowedNetlifyOrigin(normalizedRequestOrigin)) {
             return callback(null, true);
         }
 
-        return callback(new Error(`CORS blocked origin: ${requestOrigin}`));
+        // Return "not allowed" without throwing server errors on preflight.
+        return callback(null, false);
     },
     credentials: true,
     methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
