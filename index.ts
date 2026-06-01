@@ -5,14 +5,33 @@ import bcrypt from "bcryptjs";
 
 const app = express()
 
+const normalizeOrigin = (origin: string) => origin.replace(/\/+$/, "");
+
 const allowedOrigins = (process.env.CORS_ORIGINS || "http://localhost:5173")
     .split(",")
     .map((origin) => origin.trim())
+    .map(normalizeOrigin)
     .filter(Boolean);
 
 app.use(cors({
-    origin: allowedOrigins,
-    credentials: true
+    origin: (requestOrigin, callback) => {
+        // Allow non-browser requests and server-to-server calls.
+        if (!requestOrigin) {
+            return callback(null, true);
+        }
+
+        const normalizedRequestOrigin = normalizeOrigin(requestOrigin);
+
+        if (allowedOrigins.includes(normalizedRequestOrigin)) {
+            return callback(null, true);
+        }
+
+        return callback(new Error(`CORS blocked origin: ${requestOrigin}`));
+    },
+    credentials: true,
+    methods: ["GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"],
+    allowedHeaders: ["Content-Type", "Authorization"],
+    optionsSuccessStatus: 204
 }));
 app.use(express.json())
 
